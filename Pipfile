@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+daphne = "*"
+djangorestframework="*"
+djangorestframework-simplejwt="*"
+django-cors-headers="*"
+psycopg2="*"
+channels="*"
+channels_redis="*"
+django_redis="*"
+pyotp="*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
