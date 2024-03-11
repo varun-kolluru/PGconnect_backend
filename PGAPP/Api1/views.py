@@ -294,7 +294,7 @@ def Add_Grpmsg_for_newpgmember(new_member,pgid):
             past_notifications=cache.get(key+i)
             if past_notifications==None:
                 past_notifications=[]
-            past_notifications.append(["Greet you new PG mate, "+new_member+" just joined this PG 🎉🥳",'nan','grp notification'])
+            past_notifications.append({"msg":"Greet you new PG mate, "+new_member.split('_')[0]+" just joined this PG 🎉🥳","to":'grp notification'})
             cache.set(key+i,past_notifications)
 
 @api_view(['GET','POST'])
