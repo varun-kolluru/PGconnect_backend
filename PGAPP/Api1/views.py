@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime,timedelta 
 import pyotp
 from django.core.cache import cache
+from datetime import datetime, timedelta
 
 
 ##################################################### caching description ##############################
@@ -93,10 +94,17 @@ def pg_cache(key,data):
     if record!=None:
         record.append(data)
         cache.set(key,record)
+
+def pg_cache1(key,pgid):
+    record=cache.get(key)
+    if record!=None:
+        record=[i for i in record if i["id"]!=pgid]
+        cache.set(key,record)
                                       ###### Room_Info cache #####
         
 def Room_Info_cache1(key,roomno,capacity):        #capacity update
     record=cache.get(key)
+    print(record)
     if record!=None:
         for i in range(len(record)):
             if record[i]["roomno"]==roomno:
@@ -134,14 +142,15 @@ def Guest_Info_cache3(key,pgid,roomno,username,start_date):
 
                                       ###### payment cache #####
 def payments_cache1(key,roomno,username):
-    if key[len(key)-5:]=="True":
-        other_key=key[:len(key)-5]+"False"
+    if key[len(key)-4:]=="True":
+        other_key=key[:len(key)-4]+"False"
         record1=cache.get(key)
         record2=cache.get(other_key)
         if record2!=None:
-            if record1!=None and len(record1)>0:
-                record1=record1[-1]
-                record2.append(record1)
+            if record1!=None:
+                for i in range(len(record1)):
+                    record1[i]["active"]=False
+                record2+=record1
                 cache.set(other_key,record2)
             else:
                 cache.delete(other_key)
@@ -149,10 +158,7 @@ def payments_cache1(key,roomno,username):
     record=cache.get(key)
     if record!=None:
         record=[i for i in record if (i["roomno"]==roomno and i["payer"]==username)==False]
-        if len(record)==0:
-            cache.delete(key)
-        else:
-            cache.set(key,record)
+        cache.set(key,record)
 
 def payments_cache2(key,data):
     record=cache.get(key)
@@ -190,6 +196,19 @@ def Pg_add_view(request):
         pg_cache('Pgs_Data'+'city='+data["city"],data)
 
         return Response({"id":serialized_item.instance.id})
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pg_del_view(request):
+    if request.method=='POST':
+        records=Pgs_Data.objects.filter(id=request.data["pgid"]).delete()
+        data=request.data
+        if records!=0:
+            pg_cache1('Pgs_Data'+data["username"],data["pgid"])
+            pg_cache1('Pgs_Data'+'id='+str(data["pgid"]),data["pgid"])
+            pg_cache1('Pgs_Data'+'city='+data["city"],data["pgid"])
+        return Response({'info':"pg deleted"})
+    return Response({'info':"pg not present"})
+
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -201,7 +220,7 @@ def Pg_data_view(request):
             cache.set('Pgs_Data'+request.data["username"],record)
         data=[]
         for i in record:
-            data.append([i["id"],i["pgname"],i["floors"],i["flats"]])
+            data.append([i["id"],i["pgname"],i["floors"],i["flats"],i["city"]])
         return Response(data)
     
 @api_view(['POST'])
@@ -270,6 +289,7 @@ def capchange_view(request):  #pgid,roomno,newcapacity
     if request.method=='POST':
         record=Room_Info.objects.filter(pgid=request.data['pgid'],roomno=request.data['roomno']).update(capacity=request.data['capacity'])
         Room_Info_cache1('Room_Info'+str(request.data['pgid']),request.data['roomno'],request.data['capacity'])
+        print(record)
         if record==0:
             serialized_item=Room_Info_serializer(data=request.data)
             serialized_item.is_valid(raise_exception=True)
@@ -294,7 +314,7 @@ def Add_Grpmsg_for_newpgmember(new_member,pgid):
             past_notifications=cache.get(key+i)
             if past_notifications==None:
                 past_notifications=[]
-            past_notifications.append({"msg":"Greet you new PG mate, "+new_member.split('_')[0]+" just joined this PG 🎉🥳","to":'grp notification'})
+            past_notifications.append({"msg":"Greet you new PG mate, "+new_member.split('_')[0]+" just joined this PG 🎉🥳","to":'grp notification',"ts":(datetime.utcnow()+ timedelta(hours=5, minutes=30)).strftime("%d-%m %H:%M")})
             cache.set(key+i,past_notifications)
 
 @api_view(['GET','POST'])
@@ -346,7 +366,8 @@ def pg_members_view(request):
         if data==None:
             data=list(Guest_Info.objects.filter(pgid=request.data['pgid']).values())
             cache.set('Guest_Info'+'pgid='+str(request.data["pgid"]),data)
-        members=set()
+        print(request.data)
+        members={request.data["owner"]}
         for i in data:
             members.add(i["username_id"]+"_"+str(request.data['pgid']))
         members=list(members)
@@ -606,5 +627,4 @@ def verify_otp_view(request):
             return Response({"matched":"done"})
         return Response({"wrong otp":"wrong otp"})
         
-
 ###################################################################################   

@@ -15,6 +15,7 @@ urlpatterns = [
 
 
     path("Pg_add",views.Pg_add_view),
+    path("pg_del",views.pg_del_view),
     path("Pg_data",views.Pg_data_view),
     path("gPg_data",views.gPg_data_view),
 
