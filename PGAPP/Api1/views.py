@@ -298,24 +298,39 @@ def capchange_view(request):  #pgid,roomno,newcapacity
             Room_Info_cache2('Room_Info'+str(request.data['pgid']),data)
         return Response("capacity updated")
     
-#########################################################   Guest info views   #####################################   
-def Add_Grpmsg_for_newpgmember(new_member,pgid):
-    new_member=new_member+'_'+str(pgid)
-    key='grp_notifications'+str(pgid)
-    data=cache.get('Guest_Info'+'pgid='+str(pgid))
+#########################################################   Guest info views   ##################################### 
+@api_view(['GET','POST'])
+#@permission_classes([IsAuthenticated])  
+def Add_Grpmsg_view(request):    #pgid ,new_member username,owner username,
+    pgid=request.data["pgid"]
+    new_member=request.data["new_member"]
+    grp_msg={"from":"PG_Group"+str(pgid),
+             "msg":"Greet your new PG mate, "+new_member+" just joined this PG 🎉🥳",
+             "to":'grp notification',
+             "ts":(datetime.utcnow()+ timedelta(hours=5, minutes=30)).strftime("%y-%m-%d %H:%M:%S")}
+    
+    data=cache.get('Guest_Info'+'pgid='+str(request.data["pgid"]))
     if data==None:
-        data=list(Guest_Info.objects.filter(pgid=pgid).values())
-        cache.set('Guest_Info'+'pgid='+str(pgid),data)
-    members={}
+        data=list(Guest_Info.objects.filter(pgid=request.data['pgid']).values())
+        cache.set('Guest_Info'+'pgid='+str(request.data["pgid"]),data)
+    members={request.data["owner"]}
     for i in data:
-        members[i["username_id"]+"_"+str(pgid)]=members.get(i["username_id"]+"_"+str(pgid),0)+1
-    if members[new_member]==1:
-        for i in members:
-            past_notifications=cache.get(key+i)
-            if past_notifications==None:
-                past_notifications=[]
-            past_notifications.append({"msg":"Greet you new PG mate, "+new_member.split('_')[0]+" just joined this PG 🎉🥳","to":'grp notification',"ts":(datetime.utcnow()+ timedelta(hours=5, minutes=30)).strftime("%d-%m %H:%M")})
-            cache.set(key+i,past_notifications)
+        members.add(i["username_id"]+"_"+str(request.data['pgid']))
+    members=list(members)
+
+    for i in members:
+        user_chats=cache.get(i)
+        if user_chats==None:
+            user_chats={}
+        if "PG_Group"+str(pgid) in user_chats:
+            user_chats["PG_Group"+str(pgid)].append(grp_msg)
+        else:
+            user_chats["PG_Group"+str(pgid)]=[grp_msg]
+        cache.set(i,user_chats)
+ 
+    return Response({'msg':"sent grp msg to all"})
+    
+    
 
 @api_view(['GET','POST'])
 #@permission_classes([IsAuthenticated])
@@ -324,14 +339,12 @@ def addguest_view(request):  #
         serialized_item=Guest_Info_serializer(data=request.data)
         serialized_item.is_valid(raise_exception=True)
         serialized_item.save()
-
         data=dict(serialized_item.validated_data)
         data["start_date"]=serialized_item.instance.start_date
         data.pop("username")
         data["username_id"]=request.data["username"]
         Guest_Info_cache1('Guest_Info'+request.data["username"],data)
         Guest_Info_cache1('Guest_Info'+'pgid='+str(request.data["pgid"]),data)
-        Add_Grpmsg_for_newpgmember(data["username_id"],request.data["pgid"])
         data=[data["roomno"],data['username_id'],data["start_date"],data["days_stay"],data["fee"],data["penality"]]
         return Response({'guest':data})
 
@@ -366,7 +379,6 @@ def pg_members_view(request):
         if data==None:
             data=list(Guest_Info.objects.filter(pgid=request.data['pgid']).values())
             cache.set('Guest_Info'+'pgid='+str(request.data["pgid"]),data)
-        print(request.data)
         members={request.data["owner"]}
         for i in data:
             members.add(i["username_id"]+"_"+str(request.data['pgid']))

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 def get_time_ist():
     utc_now = datetime.utcnow()
     ist_now = utc_now + timedelta(hours=5, minutes=30)
-    return ist_now.strftime("%d-%m %H:%M")
+    return ist_now.strftime("%y-%m-%d %H:%M:%S")
 
 #redis tip for memory management:-  ref:-https://redis.io/docs/reference/eviction/
 #set maxmemory parameter, 

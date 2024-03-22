@@ -25,6 +25,7 @@ urlpatterns = [
     path("capchange",views.capchange_view),
 
     path("addguest",views.addguest_view),
+    path("Add_Grpmsg",views.Add_Grpmsg_view),
     path("delguest",views.delguest_view),
     path("guest_phn",views.guest_phn_view),
 
