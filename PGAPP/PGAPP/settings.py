@@ -117,11 +117,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'database1',   #initial db name
-        'USER': 'varun_dev',
-        'PASSWORD': 'Varun999',
-        'HOST': 'database-1.cdxgdlfgucf3.eu-north-1.rds.amazonaws.com',
-        'PORT': '5432',
+        'NAME': '',   #initial db name
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
     }
 }
 
